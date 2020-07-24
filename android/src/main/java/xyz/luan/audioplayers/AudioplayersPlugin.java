@@ -70,6 +70,8 @@ public class AudioplayersPlugin implements MethodCallHandler, FlutterPlugin {
         final Player player = getPlayer(playerId, mode);
         switch (call.method) {
             case "play": {
+                Map<String, String> headers = new HashMap<>();
+                headers.put("Content-Type", "application/json");
                 final String url = call.argument("url");
                 final double volume = call.argument("volume");
                 final Integer position = call.argument("position");
@@ -78,7 +80,7 @@ public class AudioplayersPlugin implements MethodCallHandler, FlutterPlugin {
                 final boolean stayAwake = call.argument("stayAwake");
                 player.configAttributes(respectSilence, stayAwake, context.getApplicationContext());
                 player.setVolume(volume);
-                player.setUrl(url, isLocal, context.getApplicationContext());
+                player.setUrl(url, isLocal, context.getApplicationContext(), headers);
                 if (position != null && !mode.equals("PlayerMode.LOW_LATENCY")) {
                     player.seek(position);
                 }
@@ -114,7 +116,8 @@ public class AudioplayersPlugin implements MethodCallHandler, FlutterPlugin {
             case "setUrl": {
                 final String url = call.argument("url");
                 final boolean isLocal = call.argument("isLocal");
-                player.setUrl(url, isLocal, context.getApplicationContext());
+                final Map<String, String> headers = call.argument("headers");
+                player.setUrl(url, isLocal, context.getApplicationContext(), headers);
                 break;
             }
             case "setPlaybackRate": {

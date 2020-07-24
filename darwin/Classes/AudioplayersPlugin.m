@@ -209,6 +209,7 @@ const NSString *_defaultPlayingRoute = @"speakers";
                   ^{
                     NSLog(@"setUrl");
                     NSString *url = call.arguments[@"url"];
+                    NSDictionary *headers = call.arguments[@"header"];
                     int isLocal = [call.arguments[@"isLocal"]intValue];
                     bool respectSilence = [call.arguments[@"respectSilence"]boolValue] ;
                     [ self setUrl:url
@@ -218,6 +219,7 @@ const NSString *_defaultPlayingRoute = @"speakers";
                           onReady:^(NSString * playerId) {
                             result(@(1));
                           }
+                     headers:headers
                     ];
                   },
                 @"getDuration":
@@ -443,14 +445,16 @@ const NSString *_defaultPlayingRoute = @"speakers";
        isLocal: (bool) isLocal
        isNotification: (bool) respectSilence
        playerId: (NSString*) playerId
-       onReady:(VoidCallback)onReady
+       onReady: (VoidCallback)onReady
+       headers: (NSDictionary*) headers
 {
   NSMutableDictionary * playerInfo = players[playerId];
   AVPlayer *player = playerInfo[@"player"];
   NSMutableSet *observers = playerInfo[@"observers"];
   AVPlayerItem *playerItem;
     
-  NSLog(@"setUrl %@", url);
+  NSLog(@"setUrl/ url : %@", url);
+  NSLog(@"setUrl/ headers : %@", headers);
     
   #if TARGET_OS_IPHONE
       // code moved from play() to setUrl() to fix the bug of audio not playing in ios background
@@ -482,11 +486,20 @@ const NSString *_defaultPlayingRoute = @"speakers";
   BOOL playbackFailed = ([[player currentItem] status] == AVPlayerItemStatusFailed);
     
   if (!playerInfo || ![url isEqualToString:playerInfo[@"url"]] || playbackFailed) {
+      
+      NSURL *fileUrl;
+      
     if (isLocal) {
-      playerItem = [ [ AVPlayerItem alloc ] initWithURL:[ NSURL fileURLWithPath:url ]];
+        fileUrl = [NSURL fileURLWithPath:url];
+      playerItem = [ [ AVPlayerItem alloc ] initWithURL:fileUrl];
     } else {
-      playerItem = [ [ AVPlayerItem alloc ] initWithURL:[ NSURL URLWithString:url ]];
+        fileUrl = [NSURL URLWithString:url];
+        AVURLAsset *asset = [AVURLAsset URLAssetWithURL:fileUrl options:@{@"AVURLAssetHTTPHeaderFieldsKey" : headers}];
+      playerItem = [ [AVPlayerItem playerItemWithAsset:asset] initWithURL:fileUrl];
     }
+      
+      NSLog(@"setUrl/ fileUrl : %@", fileUrl);
+      
       
     if (playerInfo[@"url"]) {
       [[player currentItem] removeObserver:self forKeyPath:@"player.currentItem.status" ];
@@ -543,6 +556,8 @@ const NSString *_defaultPlayingRoute = @"speakers";
         time: (CMTime) time
       isNotification: (bool) respectSilence
 {
+    NSMutableDictionary * urlheaders = [NSMutableDictionary dictionary];
+    [urlheaders setObject:@"Content-Type" forKey:@"application/json"];
   [ self setUrl:url
          isLocal:isLocal
          isNotification:respectSilence
@@ -562,6 +577,7 @@ const NSString *_defaultPlayingRoute = @"speakers";
 
            [ playerInfo setObject:@true forKey:@"isPlaying" ];
          }
+        headers:urlheaders
   ];
   #if TARGET_OS_IPHONE
     _currentPlayerId = playerId; // to be used for notifications command center

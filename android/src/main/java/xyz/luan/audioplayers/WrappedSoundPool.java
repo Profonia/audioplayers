@@ -144,7 +144,7 @@ public class WrappedSoundPool extends Player {
     }
 
     @Override
-    void setUrl(final String url, final boolean isLocal, Context context) {
+    void setUrl(final String url, final boolean isLocal, Context context, Map<String, String> headers) {
         if (this.url != null && this.url.equals(url)) {
             return;
         }
